@@ -548,7 +548,7 @@ function confirmAction() {
 const VIEWS = ['day', 'week', 'month', 'calendar'];
 const VIEW_SUBTITLES = {
     day: 'One day at a time',
-    week: 'Track your goals and crush your targets',
+    week: 'Your week at a glance',
     month: 'Every planned day this month',
     calendar: 'Your scheduled tasks by time of day'
 };
@@ -661,6 +661,7 @@ function renderDayView(container) {
         const classes = ['day-pill'];
         if (d.id === day.id) classes.push('active');
         if (d.date === today) classes.push('today');
+        if (d.isOffDay) classes.push('off-day');
         return `
             <button class="${classes.join(' ')}" onclick="selectDay('${d.id}')" aria-pressed="${d.id === day.id}">
                 <span class="day-pill-weekday">${date ? DAY_NAMES[date.getDay()].slice(0, 3) : escapeHtml(d.name.slice(0, 3))}</span>
@@ -947,10 +948,16 @@ function createDayCard(day) {
                     onchange="updateDayName('${day.id}', this.value)"
                     onclick="this.select()">
             </div>
-            <button class="work-schedule-badge${hasSchedule ? ' has-schedule' : ''}" onclick="editWorkSchedule('${day.id}')"
-                title="${hasSchedule ? 'Edit schedule' : 'Add a work schedule for this day'}">
-                ${hasSchedule ? escapeHtml(day.workSchedule) : 'Edit Schedule'}
-            </button>
+            <div class="day-header-actions">
+                <button class="off-day-toggle" onclick="toggleOffDay('${day.id}')" aria-pressed="${day.isOffDay}"
+                    title="${day.isOffDay ? 'Mark as a work day' : 'Mark as a day off'}">
+                    ${day.isOffDay ? '✓ Off day' : 'Off day'}
+                </button>
+                <button class="work-schedule-badge${hasSchedule ? ' has-schedule' : ''}" onclick="editWorkSchedule('${day.id}')"
+                    title="${hasSchedule ? 'Edit schedule' : 'Add a work schedule for this day'}">
+                    ${hasSchedule ? escapeHtml(day.workSchedule) : 'Edit Schedule'}
+                </button>
+            </div>
         </div>
         <div class="day-card-body">
             <div id="sections-${day.id}"></div>
@@ -967,6 +974,16 @@ function createDayCard(day) {
     `;
 
     return dayCard;
+}
+
+// Days off are shaded in every view
+function toggleOffDay(dayId) {
+    const week = getCurrentWeek();
+    const day = week && week.days.find(d => d.id === dayId);
+    if (!day) return;
+    day.isOffDay = !day.isOffDay;
+    saveData();
+    renderDays();
 }
 
 function updateDayName(dayId, newName) {
@@ -1082,25 +1099,17 @@ function updateSectionName(dayId, sectionId, newName) {
 }
 
 function addSection(dayId) {
-    console.log('addSection called with dayId:', dayId);
-    const week = plannerData.weeks.find(w => w.id === plannerData.currentWeek);
-    console.log('Found week:', week);
-    const day = week.days.find(d => d.id === dayId);
-    console.log('Found day:', day);
-    
-    const newSection = {
+    const week = getCurrentWeek();
+    const day = week && week.days.find(d => d.id === dayId);
+    if (!day) return;
+
+    day.sections.push({
         id: generateId('section'),
         name: '',
         tasks: []
-    };
-    
-    console.log('Created new section:', newSection);
-    day.sections.push(newSection);
-    console.log('Day sections after push:', day.sections.length);
+    });
     saveData();
-    console.log('Data saved, rendering...');
     renderDays();
-    console.log('Render complete');
     
     // Focus the new section input
     setTimeout(() => {
@@ -1111,76 +1120,24 @@ function addSection(dayId) {
 }
 
 function deleteSection(dayId, sectionId) {
-    console.log('=== DELETE SECTION CALLED ===');
-    console.log('dayId:', dayId);
-    console.log('sectionId:', sectionId);
-    
-    const week = plannerData.weeks.find(w => w.id === plannerData.currentWeek);
-    if (!week) {
-        console.log('ERROR: Week not found');
-        return;
-    }
-    
-    const day = week.days.find(d => d.id === dayId);
-    if (!day) {
-        console.log('ERROR: Day not found');
-        return;
-    }
-    
-    console.log('Day sections before delete:', day.sections.map(s => ({ id: s.id, name: s.name })));
-    
-    const section = day.sections.find(s => s.id === sectionId);
-    if (!section) {
-        console.log('ERROR: Section not found');
-        return;
-    }
-    
-    // Capture these in local variables for the closure
-    const sectionName = section.name || 'this section';
-    const dayIdCopy = dayId;
-    const sectionIdCopy = sectionId;
+    const week = getCurrentWeek();
+    const day = week && week.days.find(d => d.id === dayId);
+    const section = day && day.sections.find(s => s.id === sectionId);
+    if (!section) return;
     
     showConfirmModal(
         'Delete Section',
-        `Delete "${sectionName}" and all its tasks?`,
+        `Delete "${section.name || 'this section'}" and all its tasks?`,
         () => {
-            console.log('=== DELETE CALLBACK EXECUTING ===');
-            console.log('Looking for dayId:', dayIdCopy);
-            console.log('Looking to delete sectionId:', sectionIdCopy);
-            
-            // Fresh lookup each time
-            const currentWeek = plannerData.weeks.find(w => w.id === plannerData.currentWeek);
-            if (!currentWeek) {
-                console.log('ERROR: Current week not found in callback');
-                return;
-            }
-            
-            const currentDay = currentWeek.days.find(d => d.id === dayIdCopy);
-            if (!currentDay) {
-                console.log('ERROR: Current day not found in callback');
-                return;
-            }
-            
-            console.log('Current day sections BEFORE filter:', currentDay.sections.map(s => ({ id: s.id, name: s.name })));
-            
-            // Filter out only the specific section
-            const beforeCount = currentDay.sections.length;
-            currentDay.sections = currentDay.sections.filter(s => {
-                const keep = s.id !== sectionIdCopy;
-                console.log(`Section ${s.id} (${s.name}): ${keep ? 'KEEP' : 'DELETE'}`);
-                return keep;
-            });
-            const afterCount = currentDay.sections.length;
-            
-            console.log('Current day sections AFTER filter:', currentDay.sections.map(s => ({ id: s.id, name: s.name })));
-            console.log(`Deleted section ${sectionIdCopy}. Before: ${beforeCount}, After: ${afterCount}`);
-            
+            // Look the day up again in case the data changed while the dialog was open
+            const currentWeek = getCurrentWeek();
+            const currentDay = currentWeek && currentWeek.days.find(d => d.id === dayId);
+            if (!currentDay) return;
+
+            currentDay.sections = currentDay.sections.filter(s => s.id !== sectionId);
             saveData();
-            console.log('Data saved');
             renderDays();
-            console.log('Days rendered');
             updateProgress();
-            console.log('=== DELETE COMPLETE ===');
         }
     );
 }
@@ -1194,6 +1151,7 @@ function renderTasks(day, section) {
         // Each task block holds the task row and its subtasks, so they drag together
         const taskBlock = document.createElement('div');
         taskBlock.className = 'task-block';
+        taskBlock.dataset.taskId = task.id;
 
         const taskDiv = document.createElement('div');
         taskDiv.className = 'task-item' + (task.completed ? ' completed' : '');
@@ -1303,11 +1261,13 @@ function findTask(dayId, sectionId, taskId) {
     return (section && section.tasks.find(t => t.id === taskId)) || null;
 }
 
-function addSubtask(dayId, sectionId, taskId) {
+// Adds a subtask at the end, or right after afterSubtaskId
+function addSubtask(dayId, sectionId, taskId, afterSubtaskId) {
     const task = findTask(dayId, sectionId, taskId);
     if (!task) return;
     const subtask = { id: generateId('subtask'), text: '', completed: false };
-    task.subtasks.push(subtask);
+    const afterIndex = task.subtasks.findIndex(s => s.id === afterSubtaskId);
+    task.subtasks.splice(afterIndex >= 0 ? afterIndex + 1 : task.subtasks.length, 0, subtask);
     // A new open subtask means the parent isn't finished
     task.completed = false;
     saveData();
@@ -1354,7 +1314,8 @@ function autoResize(textarea) {
     textarea.style.height = textarea.scrollHeight + 'px';
 }
 
-function addTask(dayId, sectionId) {
+// Adds a task at the end of the section, or right after afterTaskId
+function addTask(dayId, sectionId, afterTaskId) {
     const week = plannerData.weeks.find(w => w.id === plannerData.currentWeek);
     const day = week.days.find(d => d.id === dayId);
     const section = day.sections.find(s => s.id === sectionId);
@@ -1368,16 +1329,16 @@ function addTask(dayId, sectionId) {
         subtasks: []
     };
     
-    section.tasks.push(newTask);
+    const afterIndex = section.tasks.findIndex(t => t.id === afterTaskId);
+    section.tasks.splice(afterIndex >= 0 ? afterIndex + 1 : section.tasks.length, 0, newTask);
     saveData();
     renderDays();
     updateProgress();
     
     // Focus the new task input
     setTimeout(() => {
-        const taskInputs = document.querySelectorAll(`#tasks-${sectionId} .task-text`);
-        const lastInput = taskInputs[taskInputs.length - 1];
-        if (lastInput) lastInput.focus();
+        const input = document.querySelector(`[data-task-id="${newTask.id}"] .task-text`);
+        if (input) input.focus();
     }, 100);
 }
 
@@ -1660,34 +1621,41 @@ document.addEventListener('keydown', function(e) {
                      activeElement.tagName === 'TEXTAREA' ||
                      activeElement.isContentEditable;
     
-    // Ctrl + N: Add new task (when focused on a task)
-    if (e.ctrlKey && e.key === 'n' && !e.shiftKey) {
+    // Ctrl/⌘ + Enter: add another task (or subtask) after the one being edited.
+    // Ctrl/⌘ + Shift + Enter: add a section to the current day.
+    // Ctrl + N still works where the browser allows it, but Chrome and Edge on
+    // Windows reserve Ctrl + N and Ctrl + Shift + N for opening new windows.
+    const mod = e.ctrlKey || e.metaKey;
+    const addItemKey = mod && !e.shiftKey && (e.key === 'Enter' || (e.ctrlKey && e.key === 'n'));
+    const addSectionKey = mod && e.shiftKey && (e.key === 'Enter' || (e.ctrlKey && e.key === 'N'));
+    // Adding re-renders the day, so save whatever is being typed first
+    const saveTyping = () => {
+        if (isTyping) activeElement.dispatchEvent(new Event('change'));
+    };
+
+    if (addItemKey && (activeElement.classList.contains('task-text') || activeElement.classList.contains('subtask-text'))) {
         e.preventDefault();
-        // Find the currently focused task and add a new task to its section
-        if (activeElement.classList.contains('task-text')) {
-            const taskItem = activeElement.closest('.task-item');
-            const tasksContainer = taskItem.closest('.tasks-list');
-            const sectionId = tasksContainer.id.replace('tasks-', '');
-            const dayCard = taskItem.closest('.day-card');
-            const dayId = dayCard.querySelector('[id^="sections-"]').id.replace('sections-', '');
-            addTask(dayId, sectionId);
+        saveTyping();
+        const taskId = activeElement.closest('.task-block').dataset.taskId;
+        const sectionId = activeElement.closest('.tasks-list').id.replace('tasks-', '');
+        const dayId = activeElement.closest('.day-card').querySelector('[id^="sections-"]').id.replace('sections-', '');
+        if (activeElement.classList.contains('subtask-text')) {
+            addSubtask(dayId, sectionId, taskId, activeElement.closest('.subtask-item').dataset.subtaskId);
+        } else {
+            addTask(dayId, sectionId, taskId);
         }
+    } else if (addItemKey) {
+        e.preventDefault();
     }
-    
-    // Ctrl + Shift + N: Add new section (when focused anywhere in a day)
-    if (e.ctrlKey && e.shiftKey && e.key === 'N') {
+
+    if (addSectionKey) {
         e.preventDefault();
         const dayCard = activeElement.closest('.day-card');
         if (dayCard) {
+            saveTyping();
             const dayId = dayCard.querySelector('[id^="sections-"]').id.replace('sections-', '');
             addSection(dayId);
         }
-    }
-    
-    // Ctrl + N inside a subtask: add another subtask to the same task
-    if (e.ctrlKey && e.key === 'n' && !e.shiftKey && activeElement.classList.contains('subtask-text')) {
-        const addBtn = activeElement.closest('.task-block').querySelector('.task-item .icon-btn[title="Add a subtask"]');
-        if (addBtn) addBtn.click();
     }
 
     // Delete: Remove focused subtask

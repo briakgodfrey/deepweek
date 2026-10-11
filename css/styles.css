@@ -2468,3 +2468,70 @@ body.dark-mode .menu-btn {
         overflow-wrap: anywhere;
     }
 }
+
+/* ===== OFF DAY TOGGLE ===== */
+.day-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 100%;
+}
+
+.off-day-toggle {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 14px;
+    border: 1px dashed var(--gray-400);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--gray-600);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s var(--ease-out);
+}
+
+.off-day-toggle:hover {
+    border-style: solid;
+    border-color: var(--black);
+    color: var(--black);
+}
+
+.off-day-toggle[aria-pressed="true"] {
+    border-style: solid;
+    border-color: var(--gray-300);
+    background: var(--gray-200);
+    color: var(--black);
+}
+
+body.dark-mode .off-day-toggle {
+    border-color: var(--dark-border-light);
+    color: var(--dark-text-muted);
+}
+
+body.dark-mode .off-day-toggle:hover {
+    border-color: var(--dark-text);
+    color: var(--dark-text);
+}
+
+body.dark-mode .off-day-toggle[aria-pressed="true"] {
+    background: var(--dark-surface-elevated);
+    border-color: var(--dark-border-light);
+    color: var(--dark-text);
+}
+
+/* Off days were invisible in dark mode: the dark card background won */
+body.dark-mode .day-card.off-day {
+    background: linear-gradient(135deg, var(--dark-surface) 0%, var(--dark-bg) 100%);
+}
+
+.day-pill.off-day:not(.active) {
+    background: var(--gray-100);
+}
+
+body.dark-mode .day-pill.off-day:not(.active) {
+    background: var(--dark-surface);
+}

@@ -42,7 +42,7 @@ For now: No accounts, no cloud sync, no subscriptions—just open the file and s
 ## 🚀 Quick Start
 
 ### Option 1: Use It Online and Install It
-1. Visit the [live app](https://briakgodfrey.github.io/weekflow) (GitHub Pages)
+1. Visit the [live app](https://briakgodfrey.github.io/deepweek/) (GitHub Pages)
 2. Install it as an app (optional, see below). After the first visit it works offline.
 
 ### Option 2: Download and Run Locally

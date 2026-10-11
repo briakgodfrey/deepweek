@@ -19,7 +19,7 @@ if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
         toast.className = 'toast update-toast';
         toast.innerHTML = `
             <span class="toast-icon">↻</span>
-            <span class="toast-message">A new version of Weekflow is available.</span>
+            <span class="toast-message">A new version of Deepweek is available.</span>
             <button class="update-btn">Reload</button>
         `;
         toast.querySelector('.update-btn').addEventListener('click', () => {
@@ -91,7 +91,7 @@ window.addEventListener('appinstalled', () => {
     if (installBtn) installBtn.hidden = true;
     requestPersistentStorage();
     if (typeof showToast === 'function') {
-        showToast('Weekflow installed', 'success');
+        showToast('Deepweek installed', 'success');
     }
 });
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="A minimalist, monochrome productivity planner for focused work and intentional planning.">
     <meta name="author" content="Briabytes">
-    <title>Weekflow Planner</title>
+    <title>Deepweek Planner</title>
     
     <!-- App / PWA -->
     <link rel="manifest" href="manifest.webmanifest">
@@ -15,21 +15,21 @@
     <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Weekflow">
+    <meta name="apple-mobile-web-app-title" content="Deepweek">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <!-- Fonts -->
-    <link rel="stylesheet" href="css/fonts.css?v=2">
+    <link rel="stylesheet" href="css/fonts.css?v=3">
     
     <!-- Styles -->
-    <link rel="stylesheet" href="css/styles.css?v=2">
+    <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">Weekflow</div>
+                <div class="logo">Deepweek</div>
                 <div class="tagline">Your intelligent planner</div>
                 <button class="theme-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">
                     <span class="theme-icon">☀️</span>
@@ -92,7 +92,7 @@
                         <button class="data-btn" onclick="document.getElementById('importInput').click()" title="Upload a backup file to restore your data">
                             <span class="data-icon">↑</span> Import
                         </button>
-                        <button class="data-btn install-btn" id="installBtn" onclick="installApp()" title="Install Weekflow as an app on this device" hidden>
+                        <button class="data-btn install-btn" id="installBtn" onclick="installApp()" title="Install Deepweek as an app on this device" hidden>
                             <span class="data-icon">+</span> Install App
                         </button>
                     </div>
@@ -104,15 +104,21 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="content-header">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div>
-                        <h1 class="page-title" id="weekTitle">This Week</h1>
-                        <p class="page-subtitle">Track your goals and crush your targets</p>
-                    </div>
+                <div>
+                    <h1 class="page-title" id="weekTitle">This Week</h1>
+                    <p class="page-subtitle" id="pageSubtitle">Track your goals and crush your targets</p>
                 </div>
-                <button class="help-btn" onclick="showHelpModal()" title="Keyboard shortcuts">
-                    <span style="font-size: 20px;">?</span>
-                </button>
+                <div class="header-actions">
+                    <div class="view-switcher" role="group" aria-label="Planner view">
+                        <button class="view-btn" data-view="day" onclick="setView('day')" aria-pressed="false">Day</button>
+                        <button class="view-btn" data-view="week" onclick="setView('week')" aria-pressed="true">Week</button>
+                        <button class="view-btn" data-view="month" onclick="setView('month')" aria-pressed="false">Month</button>
+                        <button class="view-btn" data-view="calendar" onclick="setView('calendar')" aria-pressed="false">Calendar</button>
+                    </div>
+                    <button class="help-btn" onclick="showHelpModal()" title="Keyboard shortcuts">
+                        <span style="font-size: 20px;">?</span>
+                    </button>
+                </div>
             </header>
 
             <div class="days-grid" id="daysContainer"></div>
@@ -236,7 +242,31 @@
                     </div>
                     <div class="shortcut-item">
                         <kbd>Delete</kbd>
-                        <span>Delete focused task</span>
+                        <span>Delete focused task or subtask</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl + N</kbd>
+                        <span>In a subtask: add another subtask</span>
+                    </div>
+                </div>
+
+                <div class="shortcut-section">
+                    <div class="shortcut-category">Views</div>
+                    <div class="shortcut-item">
+                        <kbd>1</kbd>
+                        <span>Day view</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>2</kbd>
+                        <span>Week view</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>3</kbd>
+                        <span>Month view</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>4</kbd>
+                        <span>Calendar view (tasks by time of day)</span>
                     </div>
                 </div>
 
@@ -279,10 +309,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="vendor/sortablejs/Sortable.min.js?v=2"></script>
-    <script src="js/timer.js?v=2"></script>
-    <script src="js/planner.js?v=2"></script>
-    <script src="js/pwa.js?v=2"></script>
+    <script src="vendor/sortablejs/Sortable.min.js?v=3"></script>
+    <script src="js/timer.js?v=3"></script>
+    <script src="js/planner.js?v=3"></script>
+    <script src="js/pwa.js?v=3"></script>
 
     <!-- Toast notifications -->
     <div id="toastContainer" class="toast-container"></div>

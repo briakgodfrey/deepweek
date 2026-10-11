@@ -4,7 +4,7 @@
 // set the ?v= on the CSS/JS links in index.html to the same value.
 // Browsers only fetch new files when this file's contents change. Users then
 // see an "update available" prompt and get the new version on reload.
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 // The app was called Weekflow before v3, so old caches use that prefix
 const CACHE_PREFIXES = ['deepweek-', 'weekflow-'];
 const CACHE_NAME = `deepweek-${CACHE_VERSION}`;

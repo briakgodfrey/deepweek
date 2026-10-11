@@ -340,7 +340,21 @@ function renderWeekSelector() {
     });
 }
 
+// On narrow screens the sidebar slides in over the planner
+function openSidebar() {
+    document.querySelector('.sidebar').classList.add('open');
+    document.getElementById('sidebarBackdrop').classList.add('active');
+    document.getElementById('menuBtn').setAttribute('aria-expanded', 'true');
+}
+
+function closeSidebar() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('active');
+    document.getElementById('menuBtn').setAttribute('aria-expanded', 'false');
+}
+
 function switchWeek(weekId) {
+    closeSidebar();
     plannerData.currentWeek = weekId;
     const week = plannerData.weeks.find(w => w.id === weekId);
     document.getElementById('weekTitle').textContent = week.name;
@@ -353,6 +367,7 @@ function switchWeek(weekId) {
 }
 
 function addNewWeek() {
+    closeSidebar();
     document.getElementById('weekModal').classList.add('active');
 }
 
@@ -855,7 +870,8 @@ function renderCalendarView(container) {
             groupEnd = Math.max(groupEnd, event.end);
         });
         closeGroup();
-        return { day, events, unscheduled };
+        const maxLanes = Math.max(1, ...events.map(event => event.lanes));
+        return { day, events, unscheduled, maxLanes };
     });
 
     const hourCount = lastHour - firstHour;
@@ -899,10 +915,15 @@ function renderCalendarView(container) {
     }).join('');
 
     const timedCount = columns.reduce((sum, column) => sum + column.events.length, 0);
+    // Days with overlapping tasks get extra width so side-by-side blocks stay readable
+    const columnTemplate = '64px ' + columns.map(({ maxLanes }) => {
+        const lanes = Math.min(maxLanes, 4);
+        return `minmax(${96 + (lanes - 1) * 72}px, ${1 + (lanes - 1) * 0.6}fr)`;
+    }).join(' ');
     container.innerHTML = `
         ${timedCount === 0 ? '<p class="view-hint">No tasks have a time yet. Add one with <strong>+ Time</strong> in Day or Week view and it will appear here.</p>' : ''}
         <div class="calendar-scroll">
-            <div class="calendar-grid" style="--cal-days:${week.days.length}">
+            <div class="calendar-grid" style="grid-template-columns:${columnTemplate}">
                 <div class="cal-corner"></div>
                 ${heads}
                 <div class="cal-hours">${hourLabels}</div>
@@ -915,6 +936,7 @@ function renderCalendarView(container) {
 function createDayCard(day) {
     const dayCard = document.createElement('div');
     dayCard.className = 'day-card' + (day.isOffDay ? ' off-day' : '');
+    const hasSchedule = day.workSchedule && day.workSchedule !== 'Edit Schedule';
 
     dayCard.innerHTML = `
         <div class="day-card-header">
@@ -923,9 +945,10 @@ function createDayCard(day) {
                     onchange="updateDayName('${day.id}', this.value)"
                     onclick="this.select()">
             </div>
-            <div class="work-schedule-badge" onclick="editWorkSchedule('${day.id}')">
-                Edit Schedule
-            </div>
+            <button class="work-schedule-badge${hasSchedule ? ' has-schedule' : ''}" onclick="editWorkSchedule('${day.id}')"
+                title="${hasSchedule ? 'Edit schedule' : 'Add a work schedule for this day'}">
+                ${hasSchedule ? escapeHtml(day.workSchedule) : 'Edit Schedule'}
+            </button>
         </div>
         <div class="day-card-body">
             <div id="sections-${day.id}"></div>
@@ -1011,11 +1034,12 @@ function renderSections(day) {
         sectionDiv.innerHTML = `
             <div class="section-header">
                 <span class="section-drag-handle" title="Drag to reorder section">⋮⋮</span>
-                <input type="text" class="section-title-input" value="${escapeHtml(section.name)}" 
+                <textarea class="section-title-input" rows="1"
                     placeholder="Section name..."
                     onchange="updateSectionName('${day.id}', '${section.id}', this.value)"
-                    onkeypress="if(event.key === 'Enter') { updateSectionName('${day.id}', '${section.id}', this.value); this.blur(); }"
-                    onclick="this.select()">
+                    onkeypress="if(event.key === 'Enter') { event.preventDefault(); updateSectionName('${day.id}', '${section.id}', this.value); this.blur(); }"
+                    oninput="autoResize(this)"
+                    onclick="this.select()">${escapeHtml(section.name)}</textarea>
                 <div class="section-actions">
                     <button class="icon-btn" onclick="addTask('${day.id}', '${section.id}')">+ Task</button>
                     <button class="icon-btn danger" onclick="deleteSection('${day.id}', '${section.id}')">Delete</button>
@@ -1025,6 +1049,7 @@ function renderSections(day) {
         `;
         
         container.appendChild(sectionDiv);
+        autoResize(sectionDiv.querySelector('.section-title-input'));
         renderTasks(day, section);
     });
     
@@ -1077,7 +1102,8 @@ function addSection(dayId) {
     
     // Focus the new section input
     setTimeout(() => {
-        const input = document.querySelector(`input.section-title-input[value=""]`);
+        const inputs = document.querySelectorAll(`#sections-${dayId} .section-title-input`);
+        const input = inputs[inputs.length - 1];
         if (input) input.focus();
     }, 100);
 }
@@ -1703,6 +1729,7 @@ document.addEventListener('keydown', function(e) {
     
     // Esc: Close any modal
     if (e.key === 'Escape') {
+        closeSidebar();
         document.querySelectorAll('.modal.active').forEach(modal => {
             modal.classList.remove('active');
         });

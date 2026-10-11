@@ -1899,7 +1899,7 @@ body.dark-mode .month-cell.today .month-date {
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: 64px repeat(var(--cal-days, 7), minmax(96px, 1fr));
+    /* Column widths are set per day in renderCalendarView() */
     min-width: 760px;
 }
 
@@ -2367,5 +2367,92 @@ body.dark-mode .help-close-btn:hover {
 
     .help-modal-content {
         padding: 24px 20px;
+    }
+}
+
+/* ===== MOBILE MENU (sidebar on narrow screens) ===== */
+.menu-btn {
+    display: none;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: 1px solid var(--gray-300);
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--black);
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.sidebar-backdrop {
+    display: none;
+}
+
+body.dark-mode .menu-btn {
+    background: var(--dark-bg);
+    border-color: var(--dark-border-light);
+    color: var(--dark-text);
+}
+
+.header-text {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 1024px) {
+    .menu-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: flex-start;
+        margin-top: 4px;
+    }
+
+    .sidebar {
+        z-index: 1001;
+    }
+
+    .sidebar.open {
+        box-shadow: 8px 0 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .sidebar-backdrop.active {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.45);
+    }
+}
+
+/* ===== LONG TEXT ===== */
+/* Section names wrap onto more lines instead of being cut off */
+.section-title-input {
+    resize: none;
+    overflow: hidden;
+    line-height: 1.4;
+    min-width: 0;
+}
+
+/* A saved schedule shows its text; long ones wrap */
+.work-schedule-badge.has-schedule {
+    white-space: normal;
+    text-transform: none;
+    letter-spacing: 0;
+    text-align: left;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.cal-unscheduled {
+    text-align: center;
+    line-height: 1.3;
+}
+
+@media (max-width: 640px) {
+    .page-title {
+        font-size: 26px;
+        letter-spacing: -0.5px;
+        overflow-wrap: anywhere;
     }
 }

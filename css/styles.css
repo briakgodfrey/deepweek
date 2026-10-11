@@ -2020,6 +2020,15 @@ body.dark-mode .month-cell.today .month-date {
     overflow-wrap: anywhere;
 }
 
+/* Taller blocks: show as many whole lines of the name as fit, then "…" */
+.cal-event:not(.compact) .cal-event-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--text-lines, 2);
+    line-clamp: var(--text-lines, 2);
+    overflow: hidden;
+}
+
 /* Short tasks: time and name side by side on a single line */
 .cal-event.compact {
     flex-direction: row;
@@ -2061,6 +2070,9 @@ body.dark-mode .month-cell.today .month-date {
 
 .cal-event:hover .cal-event-text,
 .cal-event:focus-visible .cal-event-text {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
     white-space: normal;
     overflow: visible;
 }

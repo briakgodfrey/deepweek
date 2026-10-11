@@ -901,9 +901,11 @@ function renderCalendarView(container) {
             const label = escapeHtml(task.text) || 'Untitled task';
             // Blocks too short for two lines show the time and name on one line
             const compact = height < 40 ? ' compact' : '';
+            // How many lines of the name fit under the time label; the rest ends in "…"
+            const textLines = Math.max(1, Math.floor((height - 21) / 15.6));
             return `
                 <button class="cal-event${compact}${task.completed ? ' done' : ''}"
-                    style="top:${top}px; --event-height:${height}px; left:${lane * width}%; width:calc(${width}% - 4px)"
+                    style="top:${top}px; --event-height:${height}px; --text-lines:${textLines}; left:${lane * width}%; width:calc(${width}% - 4px)"
                     onclick="openDay('${week.id}', '${day.id}')"
                     title="${escapeHtml(task.time)} · ${label}">
                     <span class="cal-event-time">${formatMinutes(start)}</span>

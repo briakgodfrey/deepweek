@@ -1,6 +1,6 @@
 {
-    "name": "Weekflow Planner",
-    "short_name": "Weekflow",
+    "name": "Deepweek Planner",
+    "short_name": "Deepweek",
     "description": "A minimalist, private weekly planner with a built-in focus timer. Works offline.",
     "id": "./",
     "start_url": "./",

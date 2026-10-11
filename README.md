@@ -1,4 +1,6 @@
-# Weekflow
+# Deepweek
+
+> Formerly **Weekflow**. Your saved planner data carries over automatically.
 
 > A minimalist, monochrome productivity planner built for focused work and intentional planning.
 
@@ -7,7 +9,7 @@
 
 ## 🎯 Overview
 
-Weekflow is a sleek, browser-based weekly planner designed for anyone who values clean design and powerful functionality. Built with vanilla JavaScript and no build step, it's fast and private.
+Deepweek is a sleek, browser-based weekly planner designed for anyone who values clean design and powerful functionality. Built with vanilla JavaScript and no build step, it's fast and private.
 
 For now: No accounts, no cloud sync, no subscriptions—just open the file and start planning. All your data stays in your browser, making it perfect for those who prioritize privacy and simplicity.
 
@@ -15,7 +17,9 @@ For now: No accounts, no cloud sync, no subscriptions—just open the file and s
 
 ### Core Functionality
 - **📅 Multi-Week Planning** - Create and switch between unlimited weeks
+- **🗂️ Four Views** - Day, Week, Month, and Calendar (your week on an hourly time grid)
 - **✅ Task Management** - Add, edit, delete, and check off tasks with ease
+- **↳ Subtasks** - Break a task into steps; finishing the last step finishes the task
 - **⏱️ Time Estimates** - Track how long tasks should take
 - **🕐 Time Scheduling** - Assign specific times to tasks
 - **📝 Daily Notes** - Reflect on your day with built-in note sections
@@ -50,7 +54,7 @@ For now: No accounts, no cloud sync, no subscriptions—just open the file and s
 
 ## 📲 Install as an App
 
-Weekflow is a Progressive Web App (PWA): a website you can install and use like a regular app, with its own icon and window, and no app store.
+Deepweek is a Progressive Web App (PWA): a website you can install and use like a regular app, with its own icon and window, and no app store.
 
 | Platform | How to install |
 |---|---|
@@ -63,7 +67,7 @@ Once installed:
 - It opens in its own window and works with no internet connection
 - Your data stays on your device, the same as in the browser. On desktop and Android the installed app shares data with the browser tab. On iPhone/iPad the Home Screen app keeps its own separate copy, so use Export/Import to move existing data into it.
 - The app asks the browser to keep its storage persistent so your planner isn't cleared when disk space runs low
-- When a new version is published, you'll see **"A new version of Weekflow is available"**. Click **Reload** to update. Your data is kept.
+- When a new version is published, you'll see **"A new version of Deepweek is available"**. Click **Reload** to update. Your data is kept.
 
 > 💡 Export a backup now and then (**Ctrl+S**). Clearing your browser's site data or uninstalling the app can delete your planner.
 
@@ -81,6 +85,18 @@ Once installed:
 - Check boxes to mark tasks complete
 - Click **"+ Est"** to add time estimates
 - Click **"+ Time"** to schedule when you'll do it
+
+### Switching Views
+Use the **Day / Week / Month / Calendar** switcher at the top, or press **1**–**4**.
+- **Day** - One day at a time. Use the day strip or the ‹ › arrows to move between days.
+- **Week** - Every day of the week, stacked.
+- **Month** - A month grid with a preview of each day's tasks. Click a day to open it, or click an empty date to start a new week there.
+- **Calendar** - The week on an hourly grid. Tasks with a **Time** appear as blocks sized by their **Est** (e.g. `45 min`, `1.5 hrs`). Tasks without a time are counted as "untimed" under each day.
+
+### Subtasks
+- Click **"+ Sub"** on any task to add a step under it
+- Check off steps individually; checking the parent task checks off all its steps
+- Drag steps by their handle to reorder them
 
 ### Using the Pomodoro Timer
 1. Click **"Start"** in the sidebar to begin a 25-minute focus session
@@ -143,7 +159,9 @@ The design embraces **refined minimalism**:
 - [X] Data export (JSON/CSV)
 - [X] Drag-and-drop task reordering
 - [ ] Recurring tasks
-- [ ] Calendar view
+- [X] Calendar view
+- [X] Day and month views
+- [X] Subtasks
 - [ ] Time blocking visualization
 - [ ] Weekly/monthly analytics
 - [ ] Import from Google Calendar

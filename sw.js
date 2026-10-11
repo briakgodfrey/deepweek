@@ -1,10 +1,12 @@
-// Weekflow service worker: caches the app shell so it works fully offline.
+// Deepweek service worker: caches the app shell so it works fully offline.
 //
 // RELEASING AN UPDATE: bump CACHE_VERSION whenever any app file changes.
 // Browsers only fetch new files when this file's contents change. Users then
 // see an "update available" prompt and get the new version on reload.
-const CACHE_VERSION = 'v1';
-const CACHE_NAME = `weekflow-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v2';
+// The app was called Weekflow before v2, so old caches use that prefix
+const CACHE_PREFIXES = ['deepweek-', 'weekflow-'];
+const CACHE_NAME = `deepweek-${CACHE_VERSION}`;
 
 // Every file the app needs to run offline (paths relative to this file).
 // If a file is missing, installation fails and the previous version stays active.
@@ -50,7 +52,7 @@ self.addEventListener('activate', event => {
         caches.keys()
             .then(keys => Promise.all(
                 keys
-                    .filter(key => key.startsWith('weekflow-') && key !== CACHE_NAME)
+                    .filter(key => CACHE_PREFIXES.some(prefix => key.startsWith(prefix)) && key !== CACHE_NAME)
                     .map(key => caches.delete(key))
             ))
             .then(() => self.clients.claim())

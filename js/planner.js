@@ -1,9 +1,54 @@
 // Planner Data Structure
 // Bump SCHEMA_VERSION whenever the shape of plannerData changes, and add a
 // step to migratePlannerData() so existing users' data is upgraded on load.
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const STORAGE_KEY = 'plannerData';
+const VIEW_KEY = 'plannerView';
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MONTH_ABBREVIATIONS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+// Date helpers. Days store their date as a local "YYYY-MM-DD" string.
+function toISODate(date) {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function parseISODate(value) {
+    if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.getMonth() === month - 1 ? date : null;
+}
+
+function addDays(date, count) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + count);
+    return result;
+}
+
+function formatDayName(date) {
+    return `${DAY_NAMES[date.getDay()]}, ${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;
+}
+
+function buildWeekDays(startDate) {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const date = addDays(startDate, i);
+        days.push({
+            id: generateId('day'),
+            date: toISODate(date),
+            name: formatDayName(date),
+            workSchedule: 'Edit Schedule',
+            isOffDay: false,
+            notes: '',
+            sections: []
+        });
+    }
+    return days;
+}
 
 let plannerData = {
     schemaVersion: SCHEMA_VERSION,
@@ -21,26 +66,8 @@ let plannerData = {
 function initializeDefaultWeek() {
     const week = plannerData.weeks[0];
     if (week.days.length === 0) {
-        const today = new Date();
-        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        
         // Start from today
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(today);
-            date.setDate(today.getDate() + i);
-            
-            const dayName = daysOfWeek[date.getDay()];
-            const monthDay = `${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;
-            
-            week.days.push({
-                id: generateId('day'),
-                name: `${dayName}, ${monthDay}`,
-                workSchedule: 'Edit Schedule',
-                isOffDay: false,
-                notes: '',
-                sections: []
-            });
-        }
+        week.days = buildWeekDays(new Date());
     }
 }
 
@@ -127,11 +154,60 @@ function saveData() {
 function migratePlannerData(raw) {
     const version = Number.isInteger(raw.schemaVersion) ? raw.schemaVersion : 0;
     if (version > SCHEMA_VERSION) {
-        throw new Error('This data was created by a newer version of Weekflow');
+        throw new Error('This data was created by a newer version of Deepweek');
     }
     // v0 -> v1: schemaVersion introduced; no structural changes.
-    // Future migrations go here, e.g. if (version < 2) { ... }
-    return { ...raw, schemaVersion: SCHEMA_VERSION };
+    // v1 -> v2: days get a real date (inferred from names like "Monday, Oct 11"),
+    // tasks get subtasks (defaulted in normalizePlannerData).
+    const data = { ...raw, schemaVersion: SCHEMA_VERSION };
+    if (version < 2) {
+        data.weeks = raw.weeks.map(week =>
+            week && typeof week === 'object' && Array.isArray(week.days)
+                ? { ...week, days: inferWeekDates(week) }
+                : week
+        );
+    }
+    return data;
+}
+
+// IDs from generateId() start with a millisecond timestamp, which tells us
+// roughly when a day was created and so which year "Oct 11" refers to.
+function timestampFromId(id) {
+    const match = /^[a-z]+(\d{13})/.exec(typeof id === 'string' ? id : '');
+    return match ? new Date(Number(match[1])) : null;
+}
+
+function inferDateFromName(name, reference) {
+    const match = /([A-Za-z]{3,})\.?\s+(\d{1,2})\b/.exec(typeof name === 'string' ? name : '');
+    if (!match) return null;
+    const month = MONTH_ABBREVIATIONS.indexOf(match[1].slice(0, 3).toLowerCase());
+    if (month < 0) return null;
+    const dayOfMonth = Number(match[2]);
+
+    // Pick the year that puts the date closest to when the day was created
+    let best = null;
+    for (const year of [reference.getFullYear() - 1, reference.getFullYear(), reference.getFullYear() + 1]) {
+        const candidate = new Date(year, month, dayOfMonth);
+        if (candidate.getMonth() !== month) continue;
+        if (!best || Math.abs(candidate - reference) < Math.abs(best - reference)) best = candidate;
+    }
+    return best;
+}
+
+function inferWeekDates(week) {
+    const days = week.days.map(day => (day && typeof day === 'object' ? day : {}));
+    const dates = days.map(day => {
+        if (parseISODate(day.date)) return parseISODate(day.date);
+        const reference = timestampFromId(day.id) || timestampFromId(week.id) || new Date();
+        return inferDateFromName(day.name, reference);
+    });
+
+    // Days in a week are consecutive, so fill any gaps from the first known date
+    const anchor = dates.findIndex(Boolean);
+    return days.map((day, i) => {
+        const date = dates[i] || (anchor >= 0 ? addDays(dates[anchor], i - anchor) : null);
+        return { ...day, date: date ? toISODate(date) : '' };
+    });
 }
 
 // Validate untrusted data (from storage or an imported file) and coerce it
@@ -161,6 +237,7 @@ function normalizePlannerData(raw) {
         name: asText(week.name) || 'Untitled Week',
         days: asArray(week.days).map(asObject).map(day => ({
             id: cleanId(day.id, 'day'),
+            date: parseISODate(day.date) ? day.date : '',
             name: asText(day.name),
             workSchedule: asText(day.workSchedule) || 'Edit Schedule',
             isOffDay: day.isOffDay === true,
@@ -173,7 +250,12 @@ function normalizePlannerData(raw) {
                     text: asText(task.text),
                     time: asText(task.time),
                     estimate: asText(task.estimate),
-                    completed: task.completed === true
+                    completed: task.completed === true,
+                    subtasks: asArray(task.subtasks).map(asObject).map(subtask => ({
+                        id: cleanId(subtask.id, 'subtask'),
+                        text: asText(subtask.text),
+                        completed: subtask.completed === true
+                    }))
                 }))
             }))
         }))
@@ -262,6 +344,8 @@ function switchWeek(weekId) {
     plannerData.currentWeek = weekId;
     const week = plannerData.weeks.find(w => w.id === weekId);
     document.getElementById('weekTitle').textContent = week.name;
+    selectedDayId = null;
+    monthCursor = null;
     saveData();
     renderWeekSelector();
     renderDays();
@@ -291,35 +375,14 @@ function createNewWeek() {
         days: []
     };
 
-    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    let date;
-    
-    if (startDate) {
-        // Parse date string as local time, not UTC
-        const [year, month, day] = startDate.split('-').map(Number);
-        date = new Date(year, month - 1, day);
-    } else {
-        date = new Date();
-    }
-    
-    for (let i = 0; i < 7; i++) {
-        const dayName = daysOfWeek[date.getDay()];
-        const monthDay = `${date.toLocaleString('default', { month: 'short' })} ${date.getDate()}`;
-        
-        newWeek.days.push({
-            id: generateId('day'),
-            name: `${dayName}, ${monthDay}`,
-            workSchedule: 'Edit Schedule',
-            isOffDay: false,
-            notes: '',
-            sections: []
-        });
-        
-        date.setDate(date.getDate() + 1);
-    }
+    // Parse date string as local time, not UTC
+    const date = parseISODate(startDate) || new Date();
+    newWeek.days = buildWeekDays(date);
 
     plannerData.weeks.push(newWeek);
     plannerData.currentWeek = newWeek.id;
+    selectedDayId = null;
+    if (currentView === 'month') monthCursor = new Date(date.getFullYear(), date.getMonth(), 1);
     saveData();
     
     document.getElementById('weekNameInput').value = '';
@@ -466,46 +529,405 @@ function confirmAction() {
     }
 }
 
-// Day Management
+// Views: Day, Week, Month and Calendar (a time grid of the week)
+const VIEWS = ['day', 'week', 'month', 'calendar'];
+const VIEW_SUBTITLES = {
+    day: 'One day at a time',
+    week: 'Track your goals and crush your targets',
+    month: 'Every planned day this month',
+    calendar: 'Your scheduled tasks by time of day'
+};
+let currentView = 'week';
+let selectedDayId = null;  // Day shown in Day view
+let monthCursor = null;    // First day of the month shown in Month view
+
+function loadViewPreference() {
+    const saved = storageGet(VIEW_KEY);
+    if (VIEWS.includes(saved)) currentView = saved;
+}
+
+function setView(view) {
+    if (!VIEWS.includes(view)) return;
+    currentView = view;
+    storageSet(VIEW_KEY, view);
+    renderDays();
+}
+
+function getCurrentWeek() {
+    return plannerData.weeks.find(w => w.id === plannerData.currentWeek);
+}
+
+// Find the planned day for a date, preferring the current week when weeks overlap
+function findDayByDate(isoDate) {
+    const weeks = [getCurrentWeek(), ...plannerData.weeks].filter(Boolean);
+    for (const week of weeks) {
+        const day = week.days.find(d => d.date === isoDate);
+        if (day) return { week, day };
+    }
+    return null;
+}
+
+function openDay(weekId, dayId) {
+    plannerData.currentWeek = weekId;
+    selectedDayId = dayId;
+    saveData();
+    renderWeekSelector();
+    updateProgress();
+    setView('day');
+}
+
+function allTasks(day) {
+    return day.sections.flatMap(section => section.tasks);
+}
+
+function updateHeader() {
+    const week = getCurrentWeek();
+    const title = document.getElementById('weekTitle');
+    if (currentView === 'month' && monthCursor) {
+        title.textContent = monthCursor.toLocaleString('default', { month: 'long', year: 'numeric' });
+    } else if (week) {
+        title.textContent = week.name;
+    }
+    document.getElementById('pageSubtitle').textContent = VIEW_SUBTITLES[currentView];
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.setAttribute('aria-pressed', String(btn.dataset.view === currentView));
+    });
+}
+
 function renderDays() {
     const container = document.getElementById('daysContainer');
     container.innerHTML = '';
-    
-    const currentWeek = plannerData.weeks.find(w => w.id === plannerData.currentWeek);
+    container.className = `days-grid view-${currentView}`;
+
+    if (currentView === 'month') {
+        renderMonthView(container);
+    } else if (currentView === 'calendar') {
+        renderCalendarView(container);
+    } else if (currentView === 'day') {
+        renderDayView(container);
+    } else {
+        renderWeekView(container);
+    }
+    updateHeader();
+}
+
+function renderWeekView(container) {
+    const currentWeek = getCurrentWeek();
     if (!currentWeek) return;
 
-    currentWeek.days.forEach((day, index) => {
-        const dayCard = document.createElement('div');
-        dayCard.className = 'day-card' + (day.isOffDay ? ' off-day' : '');
-        
-        dayCard.innerHTML = `
-            <div class="day-card-header">
-                <div class="day-name-group">
-                    <input type="text" class="day-name-input" value="${escapeHtml(day.name)}" 
-                        onchange="updateDayName('${day.id}', this.value)"
-                        onclick="this.select()">
-                </div>
-                <div class="work-schedule-badge" onclick="editWorkSchedule('${day.id}')">
-                    Edit Schedule
-                </div>
-            </div>
-            <div class="day-card-body">
-                <div id="sections-${day.id}"></div>
-                <button class="add-section-btn" onclick="addSection('${day.id}')">+ Add Section</button>
-                <div class="notes-section">
-                    <div class="notes-header">
-                        <div class="notes-title">📝 Daily Notes</div>
-                    </div>
-                    <textarea class="notes-textarea" 
-                        placeholder="Reflections, thoughts, or anything else for today..."
-                        onchange="updateDayNotes('${day.id}', this.value)">${escapeHtml(day.notes)}</textarea>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(dayCard);
+    currentWeek.days.forEach(day => {
+        container.appendChild(createDayCard(day));
         renderSections(day);
     });
+}
+
+// Day view
+function getSelectedDay(week) {
+    let day = week.days.find(d => d.id === selectedDayId);
+    if (!day) {
+        const today = toISODate(new Date());
+        day = week.days.find(d => d.date === today) || week.days[0];
+        selectedDayId = day ? day.id : null;
+    }
+    return day;
+}
+
+function renderDayView(container) {
+    const week = getCurrentWeek();
+    if (!week) return;
+    const day = getSelectedDay(week);
+    if (!day) return;
+
+    const today = toISODate(new Date());
+    const pills = week.days.map(d => {
+        const date = parseISODate(d.date);
+        const tasks = allTasks(d);
+        const done = tasks.filter(t => t.completed).length;
+        const classes = ['day-pill'];
+        if (d.id === day.id) classes.push('active');
+        if (d.date === today) classes.push('today');
+        return `
+            <button class="${classes.join(' ')}" onclick="selectDay('${d.id}')" aria-pressed="${d.id === day.id}">
+                <span class="day-pill-weekday">${date ? DAY_NAMES[date.getDay()].slice(0, 3) : escapeHtml(d.name.slice(0, 3))}</span>
+                <span class="day-pill-date">${date ? date.getDate() : ''}</span>
+                <span class="day-pill-count">${tasks.length ? `${done}/${tasks.length}` : '&nbsp;'}</span>
+            </button>
+        `;
+    }).join('');
+
+    const strip = document.createElement('div');
+    strip.className = 'day-strip';
+    strip.innerHTML = `
+        <button class="day-strip-arrow" onclick="stepDay(-1)" aria-label="Previous day">‹</button>
+        <div class="day-pills">${pills}</div>
+        <button class="day-strip-arrow" onclick="stepDay(1)" aria-label="Next day">›</button>
+    `;
+    container.appendChild(strip);
+
+    const card = createDayCard(day);
+    card.classList.add('day-card-focus');
+    container.appendChild(card);
+    renderSections(day);
+}
+
+function selectDay(dayId) {
+    selectedDayId = dayId;
+    renderDays();
+}
+
+// Move one day back or forward, crossing into another week if one covers that date
+function stepDay(delta) {
+    const week = getCurrentWeek();
+    const day = getSelectedDay(week);
+    const index = week.days.indexOf(day);
+    const neighbour = week.days[index + delta];
+    if (neighbour) {
+        selectDay(neighbour.id);
+        return;
+    }
+
+    const date = parseISODate(day.date);
+    const match = date && findDayByDate(toISODate(addDays(date, delta)));
+    if (match && match.week.id !== week.id) {
+        openDay(match.week.id, match.day.id);
+    } else {
+        showToast(delta < 0 ? 'No earlier day planned' : 'No later day planned — create a new week', 'warning');
+    }
+}
+
+// Month view
+function defaultMonthCursor() {
+    const week = getCurrentWeek();
+    const firstDated = week && week.days.map(d => parseISODate(d.date)).find(Boolean);
+    const date = firstDated || new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function stepMonth(delta) {
+    const cursor = monthCursor || defaultMonthCursor();
+    monthCursor = delta === 0
+        ? new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+        : new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1);
+    renderDays();
+}
+
+function renderMonthView(container) {
+    if (!monthCursor) monthCursor = defaultMonthCursor();
+    const year = monthCursor.getFullYear();
+    const month = monthCursor.getMonth();
+    const gridStart = addDays(monthCursor, -monthCursor.getDay());
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cellCount = Math.ceil((monthCursor.getDay() + daysInMonth) / 7) * 7;
+    const today = toISODate(new Date());
+
+    const headers = DAY_NAMES.map(name => `<div class="month-weekday">${name.slice(0, 3)}</div>`).join('');
+
+    let cells = '';
+    for (let i = 0; i < cellCount; i++) {
+        const date = addDays(gridStart, i);
+        const iso = toISODate(date);
+        const match = findDayByDate(iso);
+        const classes = ['month-cell'];
+        if (date.getMonth() !== month) classes.push('outside');
+        if (iso === today) classes.push('today');
+        if (!match) classes.push('unplanned');
+        if (match && match.day.isOffDay) classes.push('off-day');
+
+        let body = '';
+        let label = `${formatDayName(date)}: no week planned. Create one starting here.`;
+        if (match) {
+            const tasks = allTasks(match.day);
+            const done = tasks.filter(t => t.completed).length;
+            const preview = tasks.slice(0, 3).map(t => `
+                <span class="month-task${t.completed ? ' done' : ''}">${escapeHtml(t.text) || 'Untitled task'}</span>
+            `).join('');
+            const more = tasks.length > 3 ? `<span class="month-more">+${tasks.length - 3} more</span>` : '';
+            const count = tasks.length ? `<span class="month-count">${done}/${tasks.length}</span>` : '';
+            body = `${count}<span class="month-tasks">${preview}${more}</span>`;
+            label = `${formatDayName(date)}: ${tasks.length} tasks, ${done} done`;
+        }
+
+        const action = match
+            ? `openDay('${match.week.id}', '${match.day.id}')`
+            : `startWeekOn('${iso}')`;
+        cells += `
+            <button class="${classes.join(' ')}" onclick="${action}" aria-label="${escapeHtml(label)}">
+                <span class="month-date">${date.getDate()}</span>
+                ${body}
+            </button>
+        `;
+    }
+
+    container.innerHTML = `
+        <div class="view-toolbar">
+            <button class="icon-btn" onclick="stepMonth(-1)" aria-label="Previous month">‹ Prev</button>
+            <button class="icon-btn" onclick="stepMonth(0)">Today</button>
+            <button class="icon-btn" onclick="stepMonth(1)" aria-label="Next month">Next ›</button>
+        </div>
+        <div class="month-grid">${headers}${cells}</div>
+    `;
+}
+
+function startWeekOn(isoDate) {
+    const start = parseISODate(isoDate);
+    const end = addDays(start, 6);
+    const short = date => date.toLocaleString('default', { month: 'short', day: 'numeric' });
+    document.getElementById('weekNameInput').value = `${short(start)} – ${short(end)}`;
+    document.getElementById('weekStartDate').value = isoDate;
+    addNewWeek();
+}
+
+// Calendar view: the current week laid out on an hourly time grid
+const CALENDAR_HOUR_HEIGHT = 48;
+
+// Accepts "12:00 PM", "9am", "9:30", "14:15". Returns minutes after midnight, or null.
+function parseTaskTime(text) {
+    const match = /^\s*(\d{1,2})(?::(\d{2}))?\s*(a|p)?\.?\s*m?\.?\s*$/i.exec(text || '');
+    if (!match) return null;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const meridiem = (match[3] || '').toLowerCase();
+    if (minutes > 59 || hours > 23 || (meridiem && (hours < 1 || hours > 12))) return null;
+    if (meridiem === 'p' && hours !== 12) hours += 12;
+    if (meridiem === 'a' && hours === 12) hours = 0;
+    return hours * 60 + minutes;
+}
+
+// Accepts "30 min", "1h", "1.5 hrs", "1h 30m", or a bare number of minutes
+function parseEstimate(text) {
+    const value = (text || '').toLowerCase();
+    const hours = /(\d+(?:\.\d+)?)\s*h/.exec(value);
+    const minutes = /(\d+)\s*m/.exec(value);
+    let total = (hours ? Number(hours[1]) * 60 : 0) + (minutes ? Number(minutes[1]) : 0);
+    if (!hours && !minutes && /^\s*\d+\s*$/.test(value)) total = Number(value);
+    return Math.max(total || 30, 15);
+}
+
+function formatMinutes(total) {
+    const hours = Math.floor(total / 60);
+    const minutes = total % 60;
+    const suffix = hours >= 12 && hours < 24 ? 'PM' : 'AM';
+    const display = hours % 12 === 0 ? 12 : hours % 12;
+    return minutes ? `${display}:${String(minutes).padStart(2, '0')} ${suffix}` : `${display} ${suffix}`;
+}
+
+function renderCalendarView(container) {
+    const week = getCurrentWeek();
+    if (!week) return;
+    const today = toISODate(new Date());
+
+    // Collect timed tasks per day and work out which hours to show
+    let firstHour = 7;
+    let lastHour = 22;
+    const columns = week.days.map(day => {
+        const events = [];
+        let unscheduled = 0;
+        day.sections.forEach(section => section.tasks.forEach(task => {
+            const start = parseTaskTime(task.time);
+            if (start === null) {
+                unscheduled++;
+                return;
+            }
+            const end = Math.min(start + parseEstimate(task.estimate), 24 * 60);
+            events.push({ task, section, start, end });
+            firstHour = Math.min(firstHour, Math.floor(start / 60));
+            lastHour = Math.max(lastHour, Math.ceil(end / 60));
+        }));
+
+        // Give overlapping tasks side-by-side lanes
+        events.sort((a, b) => a.start - b.start);
+        const laneEnds = [];
+        events.forEach(event => {
+            let lane = laneEnds.findIndex(endTime => endTime <= event.start);
+            if (lane === -1) lane = laneEnds.length;
+            laneEnds[lane] = event.end;
+            event.lane = lane;
+        });
+        return { day, events, unscheduled, lanes: Math.max(laneEnds.length, 1) };
+    });
+
+    const hourCount = lastHour - firstHour;
+    const gridHeight = hourCount * CALENDAR_HOUR_HEIGHT;
+    const pxPerMinute = CALENDAR_HOUR_HEIGHT / 60;
+
+    const hourLabels = Array.from({ length: hourCount }, (_, i) =>
+        `<div class="cal-hour" style="height:${CALENDAR_HOUR_HEIGHT}px">${formatMinutes((firstHour + i) * 60)}</div>`
+    ).join('');
+
+    const heads = columns.map(({ day, unscheduled }) => {
+        const date = parseISODate(day.date);
+        return `
+            <button class="cal-day-head${day.date === today ? ' today' : ''}" onclick="openDay('${week.id}', '${day.id}')">
+                <span class="cal-day-weekday">${date ? DAY_NAMES[date.getDay()].slice(0, 3) : escapeHtml(day.name)}</span>
+                <span class="cal-day-date">${date ? date.getDate() : ''}</span>
+                <span class="cal-unscheduled">${unscheduled ? `${unscheduled} untimed` : '&nbsp;'}</span>
+            </button>
+        `;
+    }).join('');
+
+    const bodies = columns.map(({ day, events, lanes }) => {
+        const blocks = events.map(({ task, start, end, lane }) => {
+            const top = (start - firstHour * 60) * pxPerMinute;
+            const height = Math.max((end - start) * pxPerMinute, 22);
+            const width = 100 / lanes;
+            const label = escapeHtml(task.text) || 'Untitled task';
+            return `
+                <button class="cal-event${task.completed ? ' done' : ''}"
+                    style="top:${top}px; height:${height}px; left:${lane * width}%; width:calc(${width}% - 4px)"
+                    onclick="openDay('${week.id}', '${day.id}')"
+                    title="${escapeHtml(task.time)} · ${label}">
+                    <span class="cal-event-time">${formatMinutes(start)}</span>
+                    <span class="cal-event-text">${label}</span>
+                </button>
+            `;
+        }).join('');
+        return `<div class="cal-day-body${day.isOffDay ? ' off-day' : ''}" style="height:${gridHeight}px">${blocks}</div>`;
+    }).join('');
+
+    const timedCount = columns.reduce((sum, column) => sum + column.events.length, 0);
+    container.innerHTML = `
+        ${timedCount === 0 ? '<p class="view-hint">No tasks have a time yet. Add one with <strong>+ Time</strong> in Day or Week view and it will appear here.</p>' : ''}
+        <div class="calendar-scroll">
+            <div class="calendar-grid" style="--cal-days:${week.days.length}">
+                <div class="cal-corner"></div>
+                ${heads}
+                <div class="cal-hours">${hourLabels}</div>
+                ${bodies}
+            </div>
+        </div>
+    `;
+}
+
+function createDayCard(day) {
+    const dayCard = document.createElement('div');
+    dayCard.className = 'day-card' + (day.isOffDay ? ' off-day' : '');
+
+    dayCard.innerHTML = `
+        <div class="day-card-header">
+            <div class="day-name-group">
+                <input type="text" class="day-name-input" value="${escapeHtml(day.name)}" 
+                    onchange="updateDayName('${day.id}', this.value)"
+                    onclick="this.select()">
+            </div>
+            <div class="work-schedule-badge" onclick="editWorkSchedule('${day.id}')">
+                Edit Schedule
+            </div>
+        </div>
+        <div class="day-card-body">
+            <div id="sections-${day.id}"></div>
+            <button class="add-section-btn" onclick="addSection('${day.id}')">+ Add Section</button>
+            <div class="notes-section">
+                <div class="notes-header">
+                    <div class="notes-title">📝 Daily Notes</div>
+                </div>
+                <textarea class="notes-textarea" 
+                    placeholder="Reflections, thoughts, or anything else for today..."
+                    onchange="updateDayNotes('${day.id}', this.value)">${escapeHtml(day.notes)}</textarea>
+            </div>
+        </div>
+    `;
+
+    return dayCard;
 }
 
 function updateDayName(dayId, newName) {
@@ -727,9 +1149,14 @@ function renderTasks(day, section) {
     container.innerHTML = '';
     
     section.tasks.forEach(task => {
+        // Each task block holds the task row and its subtasks, so they drag together
+        const taskBlock = document.createElement('div');
+        taskBlock.className = 'task-block';
+
         const taskDiv = document.createElement('div');
         taskDiv.className = 'task-item' + (task.completed ? ' completed' : '');
-        
+        const subtasksDone = task.subtasks.filter(s => s.completed).length;
+
         taskDiv.innerHTML = `
             <span class="task-drag-handle" title="Drag to reorder">⋮⋮</span>
             <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
@@ -739,6 +1166,10 @@ function renderTasks(day, section) {
                 onchange="updateTaskText('${day.id}', '${section.id}', '${task.id}', this.value)"
                 onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); updateTaskText('${day.id}', '${section.id}', '${task.id}', this.value); this.blur(); }"
                 oninput="autoResize(this)">${escapeHtml(task.text)}</textarea>
+            ${task.subtasks.length ? `
+                <span class="subtask-count" title="Subtasks done">${subtasksDone}/${task.subtasks.length}</span>
+            ` : ''}
+            <button class="icon-btn" onclick="addSubtask('${day.id}', '${section.id}', '${task.id}')" title="Add a subtask">+ Sub</button>
             ${task.estimate ? `
                 <div class="task-estimate">
                     <input type="text" value="${escapeHtml(task.estimate)}" 
@@ -760,10 +1191,13 @@ function renderTasks(day, section) {
             <button class="task-delete" onclick="deleteTask('${day.id}', '${section.id}', '${task.id}')">×</button>
         `;
         
-        container.appendChild(taskDiv);
-        
-        const textarea = taskDiv.querySelector('textarea');
-        autoResize(textarea);
+        taskBlock.appendChild(taskDiv);
+        if (task.subtasks.length) {
+            taskBlock.appendChild(createSubtaskList(day, section, task));
+        }
+        container.appendChild(taskBlock);
+
+        taskBlock.querySelectorAll('textarea').forEach(autoResize);
     });
     
     // Initialize drag and drop for this task list
@@ -784,6 +1218,95 @@ function renderTasks(day, section) {
     }
 }
 
+function createSubtaskList(day, section, task) {
+    const list = document.createElement('div');
+    list.className = 'subtask-list';
+    const ids = `'${day.id}', '${section.id}', '${task.id}'`;
+
+    list.innerHTML = task.subtasks.map(subtask => `
+        <div class="subtask-item${subtask.completed ? ' completed' : ''}" data-subtask-id="${subtask.id}">
+            <span class="subtask-drag-handle" title="Drag to reorder">⋮⋮</span>
+            <input type="checkbox" class="task-checkbox subtask-checkbox" ${subtask.completed ? 'checked' : ''}
+                aria-label="Mark subtask complete"
+                onchange="toggleSubtask(${ids}, '${subtask.id}', this.checked)">
+            <textarea class="subtask-text" rows="1"
+                placeholder="Subtask..."
+                onchange="updateSubtaskText(${ids}, '${subtask.id}', this.value)"
+                onkeypress="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); updateSubtaskText(${ids}, '${subtask.id}', this.value); this.blur(); }"
+                oninput="autoResize(this)">${escapeHtml(subtask.text)}</textarea>
+            <button class="task-delete subtask-delete" onclick="deleteSubtask(${ids}, '${subtask.id}')" aria-label="Delete subtask">×</button>
+        </div>
+    `).join('');
+
+    if (typeof Sortable !== 'undefined') {
+        new Sortable(list, {
+            animation: 150,
+            handle: '.subtask-drag-handle',
+            ghostClass: 'task-ghost',
+            dragClass: 'task-dragging',
+            onEnd: function(evt) {
+                const moved = task.subtasks.splice(evt.oldIndex, 1)[0];
+                task.subtasks.splice(evt.newIndex, 0, moved);
+                saveData();
+            }
+        });
+    }
+    return list;
+}
+
+function findTask(dayId, sectionId, taskId) {
+    const week = getCurrentWeek();
+    const day = week && week.days.find(d => d.id === dayId);
+    const section = day && day.sections.find(s => s.id === sectionId);
+    return (section && section.tasks.find(t => t.id === taskId)) || null;
+}
+
+function addSubtask(dayId, sectionId, taskId) {
+    const task = findTask(dayId, sectionId, taskId);
+    if (!task) return;
+    const subtask = { id: generateId('subtask'), text: '', completed: false };
+    task.subtasks.push(subtask);
+    // A new open subtask means the parent isn't finished
+    task.completed = false;
+    saveData();
+    renderDays();
+    updateProgress();
+
+    setTimeout(() => {
+        const input = document.querySelector(`[data-subtask-id="${subtask.id}"] .subtask-text`);
+        if (input) input.focus();
+    }, 100);
+}
+
+function updateSubtaskText(dayId, sectionId, taskId, subtaskId, text) {
+    const task = findTask(dayId, sectionId, taskId);
+    const subtask = task && task.subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
+    subtask.text = text;
+    saveData();
+}
+
+// Finishing the last subtask finishes the task; reopening one reopens it
+function toggleSubtask(dayId, sectionId, taskId, subtaskId, completed) {
+    const task = findTask(dayId, sectionId, taskId);
+    const subtask = task && task.subtasks.find(s => s.id === subtaskId);
+    if (!subtask) return;
+    subtask.completed = completed;
+    task.completed = task.subtasks.every(s => s.completed);
+    saveData();
+    renderDays();
+    updateProgress();
+}
+
+function deleteSubtask(dayId, sectionId, taskId, subtaskId) {
+    const task = findTask(dayId, sectionId, taskId);
+    if (!task) return;
+    task.subtasks = task.subtasks.filter(s => s.id !== subtaskId);
+    saveData();
+    renderDays();
+    updateProgress();
+}
+
 function autoResize(textarea) {
     textarea.style.height = 'auto';
     textarea.style.height = textarea.scrollHeight + 'px';
@@ -799,7 +1322,8 @@ function addTask(dayId, sectionId) {
         text: '',
         time: '',
         estimate: '',
-        completed: false
+        completed: false,
+        subtasks: []
     };
     
     section.tasks.push(newTask);
@@ -870,6 +1394,8 @@ function toggleTask(dayId, sectionId, taskId, completed) {
     const section = day.sections.find(s => s.id === sectionId);
     const task = section.tasks.find(t => t.id === taskId);
     task.completed = completed;
+    // Checking off a task checks off its subtasks too
+    if (completed) task.subtasks.forEach(subtask => { subtask.completed = true; });
     saveData();
     renderDays();
     updateProgress();
@@ -927,7 +1453,7 @@ function exportData() {
     
     // Generate filename with current date
     const date = new Date().toISOString().split('T')[0];
-    link.download = `weekflow-backup-${date}.json`;
+    link.download = `deepweek-backup-${date}.json`;
     
     document.body.appendChild(link);
     link.click();
@@ -992,6 +1518,7 @@ function importData(event) {
 window.addEventListener('load', () => {
     loadData();
     loadDarkMode();
+    loadViewPreference();
     
     // Initialize default week if starting fresh
     const week = plannerData.weeks.find(w => w.id === plannerData.currentWeek);
@@ -1110,6 +1637,25 @@ document.addEventListener('keydown', function(e) {
         }
     }
     
+    // Ctrl + N inside a subtask: add another subtask to the same task
+    if (e.ctrlKey && e.key === 'n' && !e.shiftKey && activeElement.classList.contains('subtask-text')) {
+        const addBtn = activeElement.closest('.task-block').querySelector('.task-item .icon-btn[title="Add a subtask"]');
+        if (addBtn) addBtn.click();
+    }
+
+    // Delete: Remove focused subtask
+    if (e.key === 'Delete' && activeElement.classList.contains('subtask-text')) {
+        e.preventDefault();
+        const deleteBtn = activeElement.closest('.subtask-item').querySelector('.subtask-delete');
+        if (deleteBtn) deleteBtn.click();
+    }
+
+    // 1-4: Switch between Day, Week, Month and Calendar views
+    if (!isTyping && !e.ctrlKey && !e.metaKey && !e.altKey && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault();
+        setView(VIEWS[Number(e.key) - 1]);
+    }
+
     // Delete: Remove focused task
     if (e.key === 'Delete' && activeElement.classList.contains('task-text')) {
         e.preventDefault();

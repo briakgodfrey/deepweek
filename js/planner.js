@@ -778,7 +778,7 @@ function startWeekOn(isoDate) {
 }
 
 // Calendar view: the current week laid out on an hourly time grid
-const CALENDAR_HOUR_HEIGHT = 48;
+const CALENDAR_HOUR_HEIGHT = 56;
 
 // Accepts "12:00 PM", "9am", "9:30", "14:15". Returns minutes after midnight, or null.
 function parseTaskTime(text) {
@@ -834,16 +834,28 @@ function renderCalendarView(container) {
             lastHour = Math.max(lastHour, Math.ceil(end / 60));
         }));
 
-        // Give overlapping tasks side-by-side lanes
+        // Give overlapping tasks side-by-side lanes. Only tasks in the same
+        // overlapping group share the width; everything else stays full width.
         events.sort((a, b) => a.start - b.start);
-        const laneEnds = [];
+        let group = [];
+        let laneEnds = [];
+        let groupEnd = -1;
+        const closeGroup = () => group.forEach(event => { event.lanes = laneEnds.length; });
         events.forEach(event => {
+            if (event.start >= groupEnd) {
+                closeGroup();
+                group = [];
+                laneEnds = [];
+            }
             let lane = laneEnds.findIndex(endTime => endTime <= event.start);
             if (lane === -1) lane = laneEnds.length;
             laneEnds[lane] = event.end;
             event.lane = lane;
+            group.push(event);
+            groupEnd = Math.max(groupEnd, event.end);
         });
-        return { day, events, unscheduled, lanes: Math.max(laneEnds.length, 1) };
+        closeGroup();
+        return { day, events, unscheduled };
     });
 
     const hourCount = lastHour - firstHour;
@@ -865,15 +877,17 @@ function renderCalendarView(container) {
         `;
     }).join('');
 
-    const bodies = columns.map(({ day, events, lanes }) => {
-        const blocks = events.map(({ task, start, end, lane }) => {
+    const bodies = columns.map(({ day, events }) => {
+        const blocks = events.map(({ task, start, end, lane, lanes }) => {
             const top = (start - firstHour * 60) * pxPerMinute;
-            const height = Math.max((end - start) * pxPerMinute, 22);
+            const height = Math.max((end - start) * pxPerMinute, 24);
             const width = 100 / lanes;
             const label = escapeHtml(task.text) || 'Untitled task';
+            // Blocks too short for two lines show the time and name on one line
+            const compact = height < 40 ? ' compact' : '';
             return `
-                <button class="cal-event${task.completed ? ' done' : ''}"
-                    style="top:${top}px; height:${height}px; left:${lane * width}%; width:calc(${width}% - 4px)"
+                <button class="cal-event${compact}${task.completed ? ' done' : ''}"
+                    style="top:${top}px; --event-height:${height}px; left:${lane * width}%; width:calc(${width}% - 4px)"
                     onclick="openDay('${week.id}', '${day.id}')"
                     title="${escapeHtml(task.time)} · ${label}">
                     <span class="cal-event-time">${formatMinutes(start)}</span>

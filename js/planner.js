@@ -1541,6 +1541,7 @@ window.addEventListener('click', (e) => {
     const confirmModal = document.getElementById('confirmModal');
     const notifyModal = document.getElementById('notifyModal');
     const timerSettingsModal = document.getElementById('timerSettingsModal');
+    const helpModal = document.getElementById('helpModal');
     
     if (e.target === weekModal) {
         closeModal();
@@ -1564,6 +1565,10 @@ window.addEventListener('click', (e) => {
     
     if (e.target === timerSettingsModal) {
         closeTimerSettings();
+    }
+
+    if (e.target === helpModal) {
+        closeHelpModal();
     }
 });
 

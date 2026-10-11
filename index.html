@@ -19,10 +19,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <!-- Fonts -->
-    <link rel="stylesheet" href="css/fonts.css?v=3">
+    <link rel="stylesheet" href="css/fonts.css?v=4">
     
     <!-- Styles -->
-    <link rel="stylesheet" href="css/styles.css?v=3">
+    <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
     <div class="app-container">
@@ -219,9 +219,12 @@
 
     <!-- Help Modal -->
     <div class="modal" id="helpModal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">Keyboard Shortcuts</div>
-            <div style="padding: 20px 0;">
+        <div class="modal-content help-modal-content" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+            <div class="help-modal-header">
+                <div class="modal-header" id="helpTitle">Keyboard Shortcuts</div>
+                <button class="help-close-btn" onclick="closeHelpModal()" aria-label="Close keyboard shortcuts">×</button>
+            </div>
+            <div class="shortcut-grid">
                 <div class="shortcut-section">
                     <div class="shortcut-category">Tasks & Sections</div>
                     <div class="shortcut-item">
@@ -309,10 +312,10 @@
     </div>
 
     <!-- Scripts -->
-    <script src="vendor/sortablejs/Sortable.min.js?v=3"></script>
-    <script src="js/timer.js?v=3"></script>
-    <script src="js/planner.js?v=3"></script>
-    <script src="js/pwa.js?v=3"></script>
+    <script src="vendor/sortablejs/Sortable.min.js?v=4"></script>
+    <script src="js/timer.js?v=4"></script>
+    <script src="js/planner.js?v=4"></script>
+    <script src="js/pwa.js?v=4"></script>
 
     <!-- Toast notifications -->
     <div id="toastContainer" class="toast-container"></div>

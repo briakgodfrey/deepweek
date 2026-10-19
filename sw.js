@@ -4,7 +4,7 @@
 // set the ?v= on the CSS/JS links in index.html to the same value.
 // Browsers only fetch new files when this file's contents change. Users then
 // see an "update available" prompt and get the new version on reload.
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 // The app was called Weekflow before v3, so old caches use that prefix
 const CACHE_PREFIXES = ['deepweek-', 'weekflow-'];
 const CACHE_NAME = `deepweek-${CACHE_VERSION}`;
@@ -20,6 +20,7 @@ const APP_SHELL = [
     'js/planner.js',
     'js/timer.js',
     'js/pwa.js',
+    'js/reminders.js',
     'vendor/sortablejs/Sortable.min.js',
     'assets/fonts/manrope-latin-wght-normal.woff2',
     'assets/fonts/manrope-latin-ext-wght-normal.woff2',
@@ -84,5 +85,30 @@ self.addEventListener('fetch', event => {
 
         const cached = await cache.match(request, { ignoreSearch: true });
         return cached || fetch(request);
+    })());
+});
+
+// Clicking a reminder notification opens its day: in a window that's already
+// open if there is one, otherwise in a new one
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const data = event.notification.data || {};
+
+    event.waitUntil((async () => {
+        const scope = new URL(self.registration.scope).pathname;
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const client = windows.find(w => new URL(w.url).pathname.startsWith(scope));
+        if (client) {
+            await client.focus();
+            if (data.dayId) client.postMessage({ type: 'open-day', weekId: data.weekId, dayId: data.dayId });
+            return;
+        }
+
+        const url = new URL('./', self.registration.scope);
+        if (data.dayId) {
+            url.searchParams.set('week', data.weekId);
+            url.searchParams.set('day', data.dayId);
+        }
+        await self.clients.openWindow(url.href);
     })());
 });

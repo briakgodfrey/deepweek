@@ -22,6 +22,7 @@ For now: No accounts, no cloud sync, no subscriptions—just open the file and s
 - **↳ Subtasks** - Break a task into steps; finishing the last step finishes the task
 - **⏱️ Time Estimates** - Track how long tasks should take
 - **🕐 Time Scheduling** - Assign specific times to tasks
+- **⏰ Reminders** - Get reminded at a task's start time, or minutes to a day before
 - **📝 Daily Notes** - Reflect on your day with built-in note sections
 - **💾 Auto-Save** - Everything saves automatically to browser localStorage
 
@@ -98,6 +99,23 @@ Use the **Day / Week / Month / Calendar** switcher at the top, or press **1**–
 - Check off steps individually; checking the parent task checks off all its steps
 - Drag steps by their handle to reorder them
 
+### Reminders
+1. Click **"+ Remind"** on a task
+2. Set when the task starts and when you want to be reminded (at the start time, 5 minutes before, up to 1 day before)
+3. Click **Save**. The first time, your browser asks whether Deepweek can show notifications.
+
+When a reminder goes off:
+- A card appears in Deepweek with **Open** (jumps to that day), **Snooze 10 min**, and **×** to dismiss
+- If Deepweek isn't the window you're looking at, you also get a system notification. Clicking it opens that day.
+- Completed tasks don't send reminders
+
+Good to know:
+- **Deepweek has to be open for reminders to go off.** A background tab or a minimized window is fine; reminders arrive within about a minute of their time. Without a server, nothing can wake the app once it's fully closed.
+- If reminders came due while Deepweek was closed, you'll see **"You missed a reminder"** with the list the next time you open it (for reminders in the last 24 hours)
+- **iPhone/iPad:** notifications only work in the Home Screen app (Share → Add to Home Screen, iOS 16.4+). In a Safari tab, reminders appear inside Deepweek only.
+- If you blocked notifications, reminders still appear inside Deepweek. Allow notifications in your browser's site settings to get them in the background.
+- A reminder shows **!** on its chip if the task's time can't be read (e.g. "after lunch"). Click it to pick a time.
+
 ### Using the Pomodoro Timer
 1. Click **"Start"** in the sidebar to begin a 25-minute focus session
 2. The timer will automatically switch to a 5-minute break
@@ -121,6 +139,7 @@ Use the **Day / Week / Month / Calendar** switcher at the top, or press **1**–
 - `manifest.webmanifest` - App name, icons, and colors used when installed
 - `sw.js` - Service worker that caches the app for offline use
 - `js/pwa.js` - Registers the service worker, shows the update prompt and the install button
+- `js/reminders.js` - Schedules task reminders, shows reminder cards and notifications, and the Remind Me dialog
 - `assets/icons/` - App icons (`icon.svg` is the source; the PNGs are generated from it)
 
 **Browser Compatibility:**
@@ -133,6 +152,7 @@ Use the **Day / Week / Month / Calendar** switcher at the top, or press **1**–
 - Data persists between sessions
 - Export with **Ctrl+S**, import from a JSON backup
 - If saved data can't be read, a copy is kept under a `plannerData.corrupt-<timestamp>` key and the app starts fresh
+- Which reminders have already gone off (and any snoozes) is stored per device under `reminderState`, separate from your planner, so it isn't included in exports
 
 ## 🚢 Releasing Updates
 
@@ -159,6 +179,8 @@ The design embraces **refined minimalism**:
 - [X] Data export (JSON/CSV)
 - [X] Drag-and-drop task reordering
 - [ ] Recurring tasks
+- [X] Task reminders
+- [ ] Reminders when the app is closed (needs a server for push notifications)
 - [X] Calendar view
 - [X] Day and month views
 - [X] Subtasks

@@ -19,10 +19,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     
     <!-- Fonts -->
-    <link rel="stylesheet" href="css/fonts.css?v=8">
+    <link rel="stylesheet" href="css/fonts.css?v=9">
     
     <!-- Styles -->
-    <link rel="stylesheet" href="css/styles.css?v=8">
+    <link rel="stylesheet" href="css/styles.css?v=9">
 </head>
 <body>
     <div class="app-container">
@@ -222,6 +222,34 @@
         </div>
     </div>
 
+    <!-- Reminder Modal -->
+    <div class="modal" id="reminderModal">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="reminderTitle">
+            <div class="modal-header" id="reminderTitle">Remind Me</div>
+            <p class="modal-message reminder-task-name" id="reminderTaskName"></p>
+
+            <div class="reminder-fields">
+                <div class="setting-group">
+                    <label class="setting-label" for="reminderTimeInput">Task starts at</label>
+                    <input type="time" class="modal-input" id="reminderTimeInput" oninput="updateReminderPreview()">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label" for="reminderOffsetInput">Remind me</label>
+                    <select class="modal-input" id="reminderOffsetInput" onchange="updateReminderPreview()"></select>
+                </div>
+            </div>
+
+            <p class="reminder-preview" id="reminderPreview" aria-live="polite"></p>
+            <div class="reminder-permission" id="reminderPermission"></div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn secondary reminder-remove-btn" id="reminderRemoveBtn" onclick="removeReminder()">Remove</button>
+                <button class="modal-btn secondary" onclick="closeReminderModal()">Cancel</button>
+                <button class="modal-btn primary" id="reminderSaveBtn" onclick="saveReminder()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Help Modal -->
     <div class="modal" id="helpModal">
         <div class="modal-content help-modal-content" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -317,10 +345,11 @@
     </div>
 
     <!-- Scripts -->
-    <script src="vendor/sortablejs/Sortable.min.js?v=8"></script>
-    <script src="js/timer.js?v=8"></script>
-    <script src="js/planner.js?v=8"></script>
-    <script src="js/pwa.js?v=8"></script>
+    <script src="vendor/sortablejs/Sortable.min.js?v=9"></script>
+    <script src="js/timer.js?v=9"></script>
+    <script src="js/planner.js?v=9"></script>
+    <script src="js/reminders.js?v=9"></script>
+    <script src="js/pwa.js?v=9"></script>
 
     <!-- Toast notifications -->
     <div id="toastContainer" class="toast-container"></div>

@@ -173,6 +173,18 @@ body.dark-mode .notes-textarea:focus {
     background: var(--dark-bg);
 }
 
+/* Primary buttons flip to white so they stand out on the dark dialog */
+body.dark-mode .modal-btn.primary,
+body.dark-mode .modal-btn.primary.danger {
+    background: var(--dark-text);
+    color: var(--dark-bg);
+}
+
+body.dark-mode .modal-btn.primary:hover,
+body.dark-mode .modal-btn.primary.danger:hover {
+    background: var(--dark-text-secondary);
+}
+
 body.dark-mode .modal-btn.secondary {
     background: var(--dark-bg);
     color: var(--dark-text);
@@ -1087,6 +1099,50 @@ body.dark-mode .task-drag-handle:hover {
     outline: none;
 }
 
+/* Reminder chip on a task, styled like the time chip */
+.task-reminder {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--gray-600);
+    background: var(--white);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--gray-300);
+    flex-shrink: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s var(--ease-out);
+}
+
+.task-reminder:hover {
+    background: var(--black);
+    color: var(--white);
+    border-color: var(--black);
+}
+
+/* The task's time can't be read, so the reminder can't go off */
+.task-reminder.invalid {
+    border-style: dashed;
+    border-color: var(--gray-500);
+}
+
+body.dark-mode .task-reminder {
+    background: var(--dark-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text);
+}
+
+body.dark-mode .task-reminder:hover {
+    background: var(--dark-text);
+    color: var(--dark-bg);
+    border-color: var(--dark-text);
+}
+
+body.dark-mode .task-reminder.invalid {
+    border-color: var(--dark-text-muted);
+}
+
 .task-delete {
     width: 28px;
     height: 28px;
@@ -1347,6 +1403,13 @@ body.dark-mode .task-drag-handle:hover {
 
 .toast.success {
     background: var(--black);
+}
+
+/* Lift toasts off the near-black page in dark mode */
+body.dark-mode .toast {
+    background: var(--dark-surface-elevated);
+    border: 1px solid var(--dark-border-light);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
 }
 
 .toast.error {
@@ -2534,4 +2597,231 @@ body.dark-mode .day-card.off-day {
 
 body.dark-mode .day-pill.off-day:not(.active) {
     background: var(--dark-surface);
+}
+
+/* ===== REMINDERS ===== */
+.reminder-task-name {
+    font-weight: 600;
+    color: var(--black);
+    overflow-wrap: anywhere;
+}
+
+body.dark-mode .reminder-task-name {
+    color: var(--dark-text);
+}
+
+.reminder-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.reminder-fields .setting-group {
+    min-width: 0;
+}
+
+.reminder-fields .modal-input {
+    margin-bottom: 0;
+}
+
+select.modal-input {
+    cursor: pointer;
+}
+
+body.dark-mode select.modal-input,
+body.dark-mode input[type="time"].modal-input {
+    color-scheme: dark;
+}
+
+.reminder-preview {
+    margin: 16px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--black);
+    line-height: 1.5;
+}
+
+.reminder-preview.warning {
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+body.dark-mode .reminder-preview {
+    color: var(--dark-text);
+}
+
+body.dark-mode .reminder-preview.warning {
+    color: var(--dark-text-secondary);
+}
+
+.reminder-permission {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: var(--gray-50);
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--gray-700);
+}
+
+.reminder-permission p {
+    margin: 0;
+}
+
+.reminder-note {
+    font-size: 12px;
+    color: var(--gray-500);
+}
+
+body.dark-mode .reminder-permission {
+    background: var(--dark-surface);
+    border-color: var(--dark-border);
+    color: var(--dark-text-secondary);
+}
+
+body.dark-mode .reminder-note {
+    color: var(--dark-text-muted);
+}
+
+/* Remove sits on the left, away from Save */
+.reminder-remove-btn {
+    margin-right: auto;
+}
+
+.modal-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Reminder cards stay until dismissed */
+.reminder-toast {
+    align-items: flex-start;
+    position: relative;
+    padding-right: 44px;
+}
+
+.reminder-toast-body {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.reminder-toast-title {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.reminder-toast-meta {
+    font-size: 13px;
+    opacity: 0.75;
+}
+
+.reminder-toast-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.reminder-toast-btn {
+    padding: 6px 12px;
+    border: 1px solid currentColor;
+    background: transparent;
+    border-radius: 6px;
+    color: inherit;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+}
+
+.reminder-toast-btn:hover,
+.reminder-toast-btn:focus-visible {
+    background: var(--white);
+    color: var(--black);
+}
+
+.reminder-toast-dismiss {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+    border-color: transparent;
+}
+
+.missed-reminders-list {
+    display: grid;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.missed-reminder-item {
+    display: grid;
+    gap: 2px;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--font-display);
+    font-size: 13px;
+    padding: 8px 10px;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.missed-reminder-name {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.missed-reminder-when {
+    font-size: 12px;
+    opacity: 0.75;
+}
+
+@media (max-width: 640px) {
+    .reminder-fields {
+        grid-template-columns: 1fr;
+    }
+
+    /* Tall dialogs scroll instead of hiding their buttons */
+    .modal-content {
+        max-height: calc(100% - 32px);
+        overflow-y: auto;
+        padding: 28px 24px;
+    }
+
+    /* Reminder dialog buttons share one row */
+    #reminderModal .modal-buttons {
+        flex-wrap: nowrap;
+    }
+
+    #reminderModal .modal-btn {
+        flex: 1;
+        padding: 12px 8px;
+    }
+
+    .reminder-remove-btn {
+        margin-right: 0;
+    }
+
+    /* Toasts span the screen instead of running off the left edge */
+    .toast-container {
+        left: 16px;
+        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .toast {
+        max-width: none;
+    }
+
 }

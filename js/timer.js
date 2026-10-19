@@ -55,10 +55,11 @@ function startTimer() {
             document.getElementById('startBtn').style.display = 'inline-block';
             document.getElementById('pauseBtn').style.display = 'none';
             
-            // Notification
-            if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification(timerMode === 'focus' ? 'Break is over!' : 'Time to focus!');
-            }
+            // Notification (sendSystemNotification also works on Android and installed iPhone apps)
+            sendSystemNotification(timerMode === 'focus' ? 'Break is over!' : 'Time to focus!', {
+                tag: 'focus-timer',
+                icon: 'assets/icons/icon-192.png'
+            });
         }
     }, 1000);
 }

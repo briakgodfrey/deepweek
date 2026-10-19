@@ -1,7 +1,7 @@
 // Planner Data Structure
 // Bump SCHEMA_VERSION whenever the shape of plannerData changes, and add a
 // step to migratePlannerData() so existing users' data is upgraded on load.
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const STORAGE_KEY = 'plannerData';
 const VIEW_KEY = 'plannerView';
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
@@ -159,6 +159,7 @@ function migratePlannerData(raw) {
     // v0 -> v1: schemaVersion introduced; no structural changes.
     // v1 -> v2: days get a real date (inferred from names like "Monday, Oct 11"),
     // tasks get subtasks (defaulted in normalizePlannerData).
+    // v2 -> v3: tasks get an optional reminder (defaulted to null in normalizePlannerData).
     const data = { ...raw, schemaVersion: SCHEMA_VERSION };
     if (version < 2) {
         data.weeks = raw.weeks.map(week =>
@@ -251,6 +252,7 @@ function normalizePlannerData(raw) {
                     time: asText(task.time),
                     estimate: asText(task.estimate),
                     completed: task.completed === true,
+                    reminder: normalizeReminder(task.reminder),
                     subtasks: asArray(task.subtasks).map(asObject).map(subtask => ({
                         id: cleanId(subtask.id, 'subtask'),
                         text: asText(subtask.text),
@@ -1188,6 +1190,7 @@ function renderTasks(day, section) {
             ` : `
                 <button class="icon-btn" onclick="addTaskTime('${day.id}', '${section.id}', '${task.id}')">+ Time</button>
             `}
+            ${reminderButtonHtml(day, section, task)}
             <button class="task-delete" onclick="deleteTask('${day.id}', '${section.id}', '${task.id}')">×</button>
         `;
         
@@ -1326,6 +1329,7 @@ function addTask(dayId, sectionId, afterTaskId) {
         time: '',
         estimate: '',
         completed: false,
+        reminder: null,
         subtasks: []
     };
     
@@ -1544,6 +1548,7 @@ window.addEventListener('click', (e) => {
     const confirmModal = document.getElementById('confirmModal');
     const notifyModal = document.getElementById('notifyModal');
     const timerSettingsModal = document.getElementById('timerSettingsModal');
+    const reminderModal = document.getElementById('reminderModal');
     const helpModal = document.getElementById('helpModal');
     
     if (e.target === weekModal) {
@@ -1572,6 +1577,10 @@ window.addEventListener('click', (e) => {
 
     if (e.target === helpModal) {
         closeHelpModal();
+    }
+
+    if (e.target === reminderModal) {
+        closeReminderModal();
     }
 });
 

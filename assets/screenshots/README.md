@@ -1,8 +1,7 @@
 # Screenshots
 
-Add your planner screenshots here!
+Used in the main README. All show sample data.
 
-Recommended screenshots:
-- `main-view.png` - Full planner interface
-- `timer.png` - Pomodoro timer in action
-- `tasks.png` - Task management close-up
+- `deepweek-day.jpg` - Day view, with subtasks one level deep
+- `deepweek-month.jpg` - Month view, previewing each day's tasks and a done count
+- `deepweek-phone.jpg` - Day view on a phone

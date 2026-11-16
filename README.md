@@ -4,14 +4,31 @@
 
 > A minimalist, monochrome productivity planner built for focused work and intentional planning.
 
+**[Live app](https://briakgodfrey.github.io/deepweek/)** · **[Case study](https://briakgodfrey.com/work/weekflow.html)**
+
 ![License](https://img.shields.io/badge/license-proprietary-lightgrey.svg)
-![Version](https://img.shields.io/badge/version-1.0.0-green.svg)
+
+![Deepweek Day view: one day at a time, with subtasks one level deep (sample data)](assets/screenshots/deepweek-day.jpg)
 
 ## 🎯 Overview
 
 Deepweek is a sleek, browser-based weekly planner designed for anyone who values clean design and powerful functionality. Built with vanilla JavaScript and no build step, it's fast and private.
 
-For now: No accounts, no cloud sync, no subscriptions—just open the file and start planning. All your data stays in your browser, making it perfect for those who prioritize privacy and simplicity.
+For now: no accounts, no cloud sync, no subscriptions. Just open it and start planning. All your data stays in your browser, making it perfect for those who prioritize privacy and simplicity.
+
+## 💬 Shaped by its users
+
+Deepweek started as my own planner. Today 4 users plan with it, and their feedback decides what gets built.
+
+- **Every request gets two questions:** will people use this every week, and does it keep the promise of no account and no setup? I've had about 10 feature requests and built only the few that pass both.
+- **Day, Month and Calendar views and subtasks** were all user requests. Different people kept asking to see further ahead than seven days, and to break a big task into steps.
+- **Month view changed how people used it.** Once it shipped, users were more likely to open Deepweek and plan, not just check the current week.
+- **Reminders came next,** because users wanted one place to plan and be reminded. Without a server, reminders only go off while Deepweek is open, and that's a deliberate trade-off to keep it account-free.
+
+<p>
+  <img src="assets/screenshots/deepweek-month.jpg" alt="Month view: each day previews its tasks and a done count (sample data)" width="560">
+  <img src="assets/screenshots/deepweek-phone.jpg" alt="Day view on a phone, stacked in one column (sample data)" width="200">
+</p>
 
 ## ✨ Features
 
@@ -192,10 +209,7 @@ The design embraces **refined minimalism**:
 
 ## 🤝 Contributing
 
-This is a personal project, but suggestions and feedback are welcome! Feel free to:
-- Open issues for bugs or feature requests
-- Submit pull requests for improvements
-- Fork and customize for your own use
+This is a personal project, but suggestions and feedback are welcome! [Open an issue](https://github.com/briakgodfrey/deepweek/issues) for bugs or feature requests. Because of the license below, I'm not accepting pull requests or modified versions.
 
 ## 📄 License
 
@@ -203,15 +217,15 @@ Proprietary License - Free to use as-is for personal or commercial purposes. Mod
 
 ## 👩‍💻 About
 
-Built by **Bria** ([Briabytes](https://github.com/briakgodfrey))
+Designed and built by **Brianna Godfrey** ([portfolio](https://briakgodfrey.com) · [GitHub](https://github.com/briakgodfrey))
 
-This planner was born from a simple need: a productivity tool that's fast, private, and doesn't require creating yet another account. No cloud sync, no subscription, no tracking—just a solid planner that works offline and respects your data.
+This planner was born from a simple need: a productivity tool that's fast, private, and doesn't require creating yet another account. No cloud sync, no subscription, no tracking. Just a solid planner that works offline and respects your data.
 
 Perfect for students juggling coursework, developers managing side projects, or anyone who wants to plan their week without the bloat of traditional productivity apps.
 
 **Connect:**
 - 🌐 [Blog](https://briabytes.com)
-- 📺 [Twitch](https://twitch.tv/briabytes)
+- 📺 [Twitch](https://www.twitch.tv/bria_bytes)
 
 ## 🙏 Acknowledgments
 
